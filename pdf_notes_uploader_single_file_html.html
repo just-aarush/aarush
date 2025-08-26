@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF Notes Uploader</title>
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    /* Smooth scrollbar for notes */
+    textarea { scrollbar-width: thin; }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+  <div class="max-w-7xl mx-auto p-4 sm:p-6">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">PDF Uploader for Notes</h1>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="px-3 py-2 rounded-2xl bg-gray-200 dark:bg-gray-800 shadow hover:shadow-md transition">Toggle Theme</button>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Left: Upload & Files -->
+      <section class="lg:col-span-4 space-y-4">
+        <!-- Uploader Card -->
+        <div id="dropZone" class="group relative border-2 border-dashed rounded-2xl p-6 sm:p-8 bg-white/70 dark:bg-gray-900/60 backdrop-blur hover:border-indigo-400 transition cursor-pointer">
+          <div class="absolute inset-0 rounded-2xl pointer-events-none group-hover:bg-indigo-50/40 dark:group-hover:bg-indigo-900/10 transition"></div>
+          <div class="relative flex flex-col items-center text-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-12 h-12"><path fill="currentColor" d="M12 16q-.425 0-.712-.288T11 15V6.825L9.1 8.7Q8.8 9 8.388 9T7.7 8.7q-.3-.3-.3-.713T7.7 7.275l3.6-3.6q.15-.15.325-.213T12 3.4q.2 0 .375.062t.325.213l3.6 3.6q.3.3.288.712T16.3 8.7q-.3.3-.712.3T14.875 8.7L13 6.825V15q0 .425-.288.713T12 16Zm-6 4q-.825 0-1.413-.588T4 18v-2q0-.425.288-.713T5 15t.713.288T6 16v2h12v-2q0-.425.288-.713T19 15t.713.288T20 16v2q0 .825-.588 1.413T18 20H6Z"/></svg>
+            <p class="font-medium">Drag & drop your PDF here</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">or</p>
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white shadow hover:shadow-md active:scale-[.98] transition">
+              <input id="fileInput" type="file" accept="application/pdf" class="hidden" />
+              <span>Choose PDF</span>
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Only .pdf files are supported. Nothing is uploaded to a server—everything stays in your browser.</p>
+          </div>
+        </div>
+
+        <!-- File list -->
+        <div class="rounded-2xl bg-white dark:bg-gray-900 shadow divide-y divide-gray-100/70 dark:divide-gray-800">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <h2 class="font-semibold">Your PDFs</h2>
+            <button id="clearAll" class="text-sm px-3 py-1.5 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700">Clear list</button>
+          </div>
+          <ul id="fileList" class="max-h-64 overflow-auto">
+            <!-- dynamically populated -->
+          </ul>
+        </div>
+      </section>
+
+      <!-- Right: Viewer & Notes -->
+      <section class="lg:col-span-8 space-y-4">
+        <!-- Viewer Card -->
+        <div class="rounded-2xl bg-white dark:bg-gray-900 shadow overflow-hidden">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <h2 id="viewerTitle" class="font-semibold truncate">No PDF selected</h2>
+            <div class="flex items-center gap-2 text-sm">
+              <a id="downloadCurrent" href="#" download class="hidden px-3 py-1.5 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700">Download PDF</a>
+            </div>
+          </div>
+          <div class="aspect-[4/3] bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <iframe id="pdfViewer" class="w-full h-full" title="PDF Viewer"></iframe>
+          </div>
+        </div>
+
+        <!-- Notes Card -->
+        <div class="rounded-2xl bg-white dark:bg-gray-900 shadow">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <h2 class="font-semibold">Notes</h2>
+            <div class="flex items-center gap-2">
+              <button id="copyNotes" class="px-3 py-1.5 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-sm">Copy</button>
+              <button id="saveNotes" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Download .txt</button>
+              <button id="clearNotes" class="px-3 py-1.5 rounded-xl bg-rose-500 text-white hover:bg-rose-600 text-sm">Clear</button>
+            </div>
+          </div>
+          <div class="p-4">
+            <textarea id="notes" class="w-full min-h-[220px] rounded-xl p-3 bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Type your notes here… (auto-saves per PDF)"></textarea>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Notes auto-save locally in your browser for each PDF (by file name). Clearing site data will remove them.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      files: [], // { name, url, size }
+      currentIndex: -1,
+    };
+
+    const el = (id) => document.getElementById(id);
+    const fileInput = el('fileInput');
+    const dropZone = el('dropZone');
+    const fileList = el('fileList');
+    const pdfViewer = el('pdfViewer');
+    const viewerTitle = el('viewerTitle');
+    const downloadCurrent = el('downloadCurrent');
+    const notes = el('notes');
+
+    // Theme toggle (persist)
+    const themeToggle = el('themeToggle');
+    const applyTheme = (mode) => {
+      if (mode === 'dark') document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+      localStorage.setItem('pdfnotes:theme', mode);
+    };
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+    (function initTheme(){
+      const saved = localStorage.getItem('pdfnotes:theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+    })();
+
+    // Helpers
+    function addFiles(fileListLike) {
+      const files = Array.from(fileListLike).filter(f => f.type === 'application/pdf');
+      if (!files.length) {
+        alert('Please select a PDF (.pdf) file.');
+        return;
+      }
+      files.forEach(f => {
+        const url = URL.createObjectURL(f);
+        state.files.push({ name: f.name, url, size: f.size });
+      });
+      renderFileList();
+      // Auto-select the last added file
+      selectFile(state.files.length - 1);
+    }
+
+    function renderFileList() {
+      fileList.innerHTML = '';
+      if (!state.files.length) {
+        const li = document.createElement('li');
+        li.className = 'px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400';
+        li.textContent = 'No PDFs yet — add one above.';
+        fileList.appendChild(li);
+        return;
+      }
+      state.files.forEach((f, i) => {
+        const li = document.createElement('li');
+        li.className = `px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/60 ${i === state.currentIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}`;
+        li.innerHTML = `
+          <div class="min-w-0">
+            <p class="font-medium truncate">${f.name}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">${(f.size/1024/1024).toFixed(2)} MB</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-open="${i}" class="text-sm px-2.5 py-1 rounded-lg bg-gray-200 dark:bg-gray-800">Open</button>
+            <button data-remove="${i}" class="text-sm px-2.5 py-1 rounded-lg bg-rose-500 text-white">Remove</button>
+          </div>`;
+        fileList.appendChild(li);
+      });
+    }
+
+    function selectFile(index) {
+      if (index < 0 || index >= state.files.length) return;
+      state.currentIndex = index;
+      const f = state.files[index];
+      pdfViewer.src = f.url; // rely on browser PDF viewer
+      viewerTitle.textContent = f.name;
+      downloadCurrent.classList.remove('hidden');
+      downloadCurrent.href = f.url;
+      downloadCurrent.download = f.name;
+      renderFileList();
+      loadNotesFor(f.name);
+    }
+
+    function removeFile(index) {
+      if (index < 0 || index >= state.files.length) return;
+      const [removed] = state.files.splice(index, 1);
+      try { URL.revokeObjectURL(removed.url); } catch {}
+      if (state.currentIndex === index) {
+        // reset viewer
+        pdfViewer.src = '';
+        viewerTitle.textContent = 'No PDF selected';
+        downloadCurrent.classList.add('hidden');
+        notes.value = '';
+      }
+      if (state.currentIndex > index) state.currentIndex--;
+      renderFileList();
+    }
+
+    // Notes persistence
+    function notesKey(fileName) { return `pdfnotes:notes:${fileName}`; }
+    function loadNotesFor(fileName) {
+      const saved = localStorage.getItem(notesKey(fileName));
+      notes.value = saved || '';
+    }
+    notes.addEventListener('input', () => {
+      const f = state.files[state.currentIndex];
+      if (!f) return;
+      localStorage.setItem(notesKey(f.name), notes.value);
+    });
+
+    // Buttons: copy / save / clear
+    el('copyNotes').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(notes.value); alert('Notes copied!'); }
+      catch { alert('Could not copy.'); }
+    });
+
+    el('saveNotes').addEventListener('click', () => {
+      const f = state.files[state.currentIndex];
+      const name = f ? f.name.replace(/\.pdf$/i, '') : 'notes';
+      const blob = new Blob([notes.value], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${name}.txt`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    el('clearNotes').addEventListener('click', () => {
+      if (!confirm('Clear notes for this PDF?')) return;
+      const f = state.files[state.currentIndex];
+      if (f) localStorage.removeItem(notesKey(f.name));
+      notes.value = '';
+    });
+
+    // Clear list
+    el('clearAll').addEventListener('click', () => {
+      if (!state.files.length) return;
+      if (!confirm('Remove all PDFs from the list? (This will NOT delete your files)')) return;
+      state.files.forEach(f => { try { URL.revokeObjectURL(f.url); } catch {} });
+      state.files = [];
+      state.currentIndex = -1;
+      renderFileList();
+      pdfViewer.src = '';
+      viewerTitle.textContent = 'No PDF selected';
+      downloadCurrent.classList.add('hidden');
+      notes.value = '';
+    });
+
+    // Drag & drop handlers
+    ;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+      dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    ;['dragenter', 'dragover'].forEach(evt => {
+      dropZone.addEventListener(evt, () => dropZone.classList.add('ring-2', 'ring-indigo-400'));
+    });
+    ;['dragleave', 'drop'].forEach(evt => {
+      dropZone.addEventListener(evt, () => dropZone.classList.remove('ring-2', 'ring-indigo-400'));
+    });
+    dropZone.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // File input
+    fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+    // Handle clicks in file list (event delegation)
+    fileList.addEventListener('click', (e) => {
+      const openIdx = e.target.getAttribute('data-open');
+      const remIdx = e.target.getAttribute('data-remove');
+      if (openIdx !== null) selectFile(Number(openIdx));
+      if (remIdx !== null) removeFile(Number(remIdx));
+    });
+
+    // Initial render
+    renderFileList();
+  </script>
+</body>
+</html>
